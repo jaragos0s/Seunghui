@@ -1,3 +1,4 @@
+# RISC-V Assembly Programming
 .globl main
 .data
 buf : .space 512
@@ -53,7 +54,7 @@ firstop:
 loop:  # s7 : result, s6 : operator, s5 : operand, s4 : 48 s3 : 57, s2 : temp, s1 : 10
 	
 	lb a0, 0(t0)
-	addi t0, t0, 1 # char��ŭ�� �̵� 
+	addi t0, t0, 1 # char¸¸Å­¾¿ ÀÌµ¿ 
 	
 	beqz a0, exit
        
