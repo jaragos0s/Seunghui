@@ -1,6 +1,7 @@
 //2018114817 Choi Seunghui
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -9,17 +10,26 @@
 #include <unistd.h>
 
 char* syscallname(long call);
+int find(char[], int);
+void sorted(int);
 
+typedef struct systemcall{
+  char name[64];
+  int number;
+} systemcall;
 #if __WORDSIZE == 64
 #define REG(reg) reg.orig_rax
 #else
 #define REG(reg) reg.orig_eax
 #endif
 
+systemcall callarray[400];
+
 int main(int argc, char* argv[]) {   
   pid_t pid;
-	
+
   char* chargs[argc];
+  int max = 1;
   int i = 0;
   int count = 0;
   int syscall_entry = 1;
@@ -28,11 +38,11 @@ int main(int argc, char* argv[]) {
     i++;
   }
   chargs[i] = NULL;
-
   pid = fork();
   if(pid == 0) {
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
     execvp(chargs[0], chargs);
+ 
   } else if(pid > 0) {
     int waitstatus;
 
@@ -43,11 +53,14 @@ int main(int argc, char* argv[]) {
 	    }
 	    else
 		    syscall_entry = 1;
-	    
+
      	    struct user_regs_struct regs; 
      	    ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-	    
-	    fprintf(stdout, "\t%s\n", syscallname(REG(regs)));
+	    char* callname = syscallname(REG(regs));    
+	    if(syscall_entry == 0) { 
+		max = find(callname, max);
+	       // fprintf(stdout, "\t%s\n", callname);
+	    }
 	    ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
 	    waitpid(pid, &waitstatus, 0);
 	    if (WIFEXITED(waitstatus))
@@ -58,9 +71,50 @@ int main(int argc, char* argv[]) {
 	  printf("fork error\n");
 
   printf("Total number of syscalls: %d\n", count);
+
+  for(i = max - 1; i > 0; i--) {
+	  printf("%4d %s\n", callarray[i].number, callarray[i].name);
+  }
   return 0;
 }
+void sorted(int max) {
+	// sorting the callarray table
+	int i, j, key;
+	char* key_name = NULL;
+	for (i = 1; i < max; i++) {
+		key = callarray[i].number;
+		strcpy(key_name, callarray[i].name);
+		for (j = i-1; j > 0 && callarray[j].number > key; j--) 
+		{
+			callarray[j+1].number = callarray[j].number;
+			strcpy(callarray[j+1].name, callarray[j].name);
+		}
+		
+		callarray[j+1].number = key;
+		strcpy(callarray[j+1].name, key_name);
+	}
+	return;	       
+}
 
+		         	       
+int find(char call[], int max) {
+	int flag = 0;
+	int i;
+	for (i = 0; i < max; i++) {
+		if (!strcmp(callarray[i].name, call)) {
+			callarray[i].number++;
+			flag = 1;
+			break;
+		}
+	}
+	if (flag == 0) {
+		strcpy(callarray[max].name, call);
+		callarray[max].number = 1;
+		max++;
+	}
+	return max;
+}
+	
 // A big table for the name of syscalls
 char* syscallname(long call) {
   switch(call) {
