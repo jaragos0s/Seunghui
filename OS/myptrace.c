@@ -11,17 +11,12 @@
 
 char* syscallname(long call);
 int find(char[], int);
-void sorted(int);
+void sorted(int, int);
 
 typedef struct systemcall{
   char name[64];
   int number;
 } systemcall;
-#if __WORDSIZE == 64
-#define REG(reg) reg.orig_rax
-#else
-#define REG(reg) reg.orig_eax
-#endif
 
 systemcall callarray[400];
 
@@ -41,7 +36,7 @@ int main(int argc, char* argv[]) {
   pid = fork();
   if(pid == 0) {
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-    execvp(chargs[0], chargs);
+    execvp(chargs[0], chargs); 
  
   } else if(pid > 0) {
     int waitstatus;
@@ -56,10 +51,9 @@ int main(int argc, char* argv[]) {
 
      	    struct user_regs_struct regs; 
      	    ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-	    char* callname = syscallname(REG(regs));    
+	    char* callname = syscallname(regs.orig_rax);    
 	    if(syscall_entry == 0) { 
 		max = find(callname, max);
-	       // fprintf(stdout, "\t%s\n", callname);
 	    }
 	    ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
 	    waitpid(pid, &waitstatus, 0);
@@ -70,30 +64,43 @@ int main(int argc, char* argv[]) {
   else
 	  printf("fork error\n");
 
+  sorted(1, max);
   printf("Total number of syscalls: %d\n", count);
 
-  for(i = max - 1; i > 0; i--) {
+  for(i = 1; i < max; i++) {
 	  printf("%4d %s\n", callarray[i].number, callarray[i].name);
   }
   return 0;
 }
-void sorted(int max) {
-	// sorting the callarray table
-	int i, j, key;
-	char* key_name = NULL;
-	for (i = 1; i < max; i++) {
-		key = callarray[i].number;
-		strcpy(key_name, callarray[i].name);
-		for (j = i-1; j > 0 && callarray[j].number > key; j--) 
-		{
-			callarray[j+1].number = callarray[j].number;
-			strcpy(callarray[j+1].name, callarray[j].name);
-		}
-		
-		callarray[j+1].number = key;
-		strcpy(callarray[j+1].name, key_name);
+void SWAP(int a, int b)
+{
+	systemcall temp;
+	temp = callarray[a];
+	callarray[a] = callarray[b];
+	callarray[b] = temp;
+	return;
+}
+
+void sorted(int min, int max) {
+	if(min < max) 
+	{
+	    int key = min;
+    	    int i = min + 1;
+	    int j = max;
+	    while(i <= j) 
+	    {
+		while(i <= max && callarray[i].number >= callarray[key].number)
+	    	    i++;
+		while(j > min && callarray[j].number <= callarray[key].number)
+		    j--;		
+		if (i > j)
+		   SWAP(j, key);
+		else
+		   SWAP(i, j);
+	    }
+	    sorted(min, j-1);
+	    sorted(j+1, max);
 	}
-	return;	       
 }
 
 		         	       
@@ -248,7 +255,7 @@ char* syscallname(long call) {
 #endif
 
 #ifdef SYS_exit_group
-  case SYS_exit_group : return "exit_group";
+  case SYS_exit_group : return "execve";
 #endif
 
 #ifdef SYS_faccessat
