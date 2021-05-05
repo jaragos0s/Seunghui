@@ -9,8 +9,9 @@ Date : 4.28 - 5.7
 Completed:
   1. Print all the system calls which are called
   2. Print total number of syscalls
+  3. Count the number of system calls
+  4. Sorting the array of system calls
   
 Need To Complete:
-  1. Count the number of system calls
-  2. Modify the details
-  3. Be sure that the program abovev so that any program can be specified as command-line arguments
+  1. Modify the details
+  2. Be sure that the program above so that any program can be specified as command-line arguments
